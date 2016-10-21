@@ -59,6 +59,12 @@ class Game(ndb.Model):
                       guesses=self.attempts_allowed - self.attempts_remaining)
         score.put()
 
+    def retu(self):
+        m1=StringMessage()
+        m1.message=self.user.get().name
+        return m1
+
+
 
 class Score(ndb.Model):
     """Score object"""
@@ -105,6 +111,11 @@ class ScoreForms(messages.Message):
     items = messages.MessageField(ScoreForm, 1, repeated=True)
 
 
+
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""
     message = messages.StringField(1, required=True)
+
+class StringMessages(messages.Message):
+    """StringMessage-- outbound (multi) string message"""
+    mess = messages.MessageField(StringMessage, 1, repeated=True)

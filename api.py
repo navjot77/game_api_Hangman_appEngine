@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms
+    ScoreForms,StringMessages
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -171,22 +171,38 @@ class GuessANumberApi(remote.Service):
 
 
 
-    @endpoints.method(response_message=StringMessage,
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=StringMessage,
+                      path='games/cancel_game/{urlsafe_game_key}',
+                      name='cancel_any_game',
+                      http_method='GET')
+    def cancel_game(self, request):
+        """Cancel game as per requested urlsafe_key"""
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game:
+            if game.game_over == True:
+                return StringMessage(
+                    'Can not cancel this game as Game is already OVER.')
+            else:
+                game.key.delete()
+                return StringMessage(
+                'Game played by User: {} Cancelled'.format(game.user.get().name))
+        else:
+            raise endpoints.NotFoundException('Game not found!')
+
+
+
+
+    @endpoints.method(response_message=StringMessages,
                           path='games/active_users',
                           name='get_active_users',
                           http_method='GET')
     def get_active_users(self, request):
-        """Get the cached average moves remaining"""
+        """Get the list of all active users whose game has not been over """
         usersList=[]
         game=Game.query(Game.game_over == False)
-        logging.warning(game)
-        for active in game:
-            usersList.append(active.user.get().name)
-        sendUsers="\t".join(usersList)
-        return StringMessage(message=sendUsers)
 
-
-
+        return StringMessages(mess=[active.retu() for active in game])
 
 
 
