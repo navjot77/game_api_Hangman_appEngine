@@ -52,8 +52,7 @@ class Game(ndb.Model):
         """Ends the game - if won is True, the player won. - if won is False,
         the player lost."""
         self.game_over = True
-        self.attempts_remaining -= 1
-        self.put()
+
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
                       guesses=self.attempts_allowed - self.attempts_remaining)

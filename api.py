@@ -19,6 +19,8 @@ from utils import get_by_urlsafe
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
         urlsafe_game_key=messages.StringField(1),)
+GET_SCORES_LIMIT= endpoints.ResourceContainer(
+    limit=messages.IntegerField(1),)
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     MakeMoveForm,
     urlsafe_game_key=messages.StringField(1),)
@@ -125,9 +127,11 @@ class GuessANumberApi(remote.Service):
         if "-" not in word_guessed:  # no blanks remaining
             game.end_game(True)
             return game.to_form(
-                "\nCongratulations! You Won. The word is:".format(word_guessed))
+                "\nCongratulations! You Won. The word is:".format(joined_word))
 
         if game.attempts_remaining == 1 and player_guess not in chosen_word:
+            game.attempts_remaining -= 1
+            game.put()
             game.end_game(False)
             return game.to_form('All attempts made. YouLoose')
 
@@ -181,16 +185,32 @@ class GuessANumberApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game:
             if game.game_over == True:
-                return StringMessage(
+                return StringMessage(message=
                     'Can not cancel this game as Game is already OVER.')
             else:
+                name=game.user.get().name
                 game.key.delete()
-                return StringMessage(
-                'Game played by User: {} Cancelled'.format(game.user.get().name))
+                return StringMessage(message=
+                'Game played by User: {} Cancelled'.format(name))
         else:
             raise endpoints.NotFoundException('Game not found!')
 
+    @endpoints.method(request_message=GET_SCORES_LIMIT,
+                          response_message=ScoreForms,
+                          path='games/high_scores',
+                          name='get_high_scores',
+                          http_method='GET')
+    def get_high_scores(self, request):
+        "Get scores of all users"
+        limit=5
+        if request.limit:
+            limit=request.limit
 
+        scores = Score.query().order(-Score.won).order(Score.guesses).fetch(limit)
+        if scores:
+            return ScoreForms(items=[score.to_form() for score in scores])
+        else:
+            return ScoreForms(items=["Score Board Empty"])
 
 
     @endpoints.method(response_message=StringMessages,
