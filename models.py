@@ -7,11 +7,9 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
-words = ["hangman", "chairs", "backpack", "bodywash", "clothing",
-         "computer", "python", "program", "glasses", "sweatshirt",
-         "sweatpants", "mattress", "friends", "clocks", "biology",
-         "algebra", "suitcase", "knives", "ninjas", "shampoo"
-         ]
+words = ["udacity","education","simple","easy","navjot","university",
+         "goooooood","apartment","hyundai","mercedes","engine","nanodegree",
+         "fullstack" ]
 
 
 class User(ndb.Model):

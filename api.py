@@ -127,13 +127,13 @@ class GuessANumberApi(remote.Service):
             return game.to_form(
                 "\nCongratulations! You Won. The word is:".format(word_guessed))
 
-        if game.attempts_remaining == 1:
+        if game.attempts_remaining == 1 and player_guess not in chosen_word:
             game.end_game(False)
             return game.to_form('All attempts made. YouLoose')
 
         if player_guess not in chosen_word:
             game.attempts_remaining -= 1
-            game.put()
+        game.put()
 
 
 
@@ -168,6 +168,28 @@ class GuessANumberApi(remote.Service):
     def get_average_attempts(self, request):
         """Get the cached average moves remaining"""
         return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+
+
+
+    @endpoints.method(response_message=StringMessage,
+                          path='games/active_users',
+                          name='get_active_users',
+                          http_method='GET')
+    def get_active_users(self, request):
+        """Get the cached average moves remaining"""
+        usersList=[]
+        game=Game.query(Game.game_over == False)
+        logging.warning(game)
+        for active in game:
+            usersList.append(active.user.get().name)
+        sendUsers="\t".join(usersList)
+        return StringMessage(message=sendUsers)
+
+
+
+
+
+
 
     @staticmethod
     def _cache_average_attempts():
