@@ -7,6 +7,7 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
+
 words = ["udacity","education","simple","easy","navjot","university",
          "goooooood","apartment","hyundai","mercedes","engine","nanodegree",
          "fullstack" ]
@@ -52,10 +53,13 @@ class Game(ndb.Model):
         """Ends the game - if won is True, the player won. - if won is False,
         the player lost."""
         self.game_over = True
+        self.put()
+        performance= (self.attempts_remaining / float(self.attempts_allowed))*100
 
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
-                      guesses=self.attempts_allowed - self.attempts_remaining)
+                      guesses=self.attempts_allowed - self.attempts_remaining,
+                      performance=performance)
         score.put()
 
     def retu(self):
@@ -71,10 +75,28 @@ class Score(ndb.Model):
     date = ndb.DateProperty(required=True)
     won = ndb.BooleanProperty(required=True)
     guesses = ndb.IntegerProperty(required=True)
+    performance=ndb.FloatProperty(required=True)
 
     def to_form(self):
         return ScoreForm(user_name=self.user.get().name, won=self.won,
-                         date=str(self.date), guesses=self.guesses)
+                         date=str(self.date), guesses=self.guesses,
+                         performance=self.performance)
+
+    def to_form_ranking(self,rank):
+        return RankingForm(user_name=self.user.get().name,
+                           performance=self.performance,
+                           rank=rank)
+
+class RankingForm(messages.Message):
+    """RankingForm for outbound Ranking information"""
+    user_name = messages.StringField(1, required=True)
+    performance=messages.FloatField(2,required=True)
+    rank=messages.IntegerField(3,required=True)
+
+class RankingForms(messages.Message):
+    "Return multiple ranking form"
+    ranks=messages.MessageField(RankingForm,1,repeated=True)
+
 
 
 class GameForm(messages.Message):
@@ -103,7 +125,7 @@ class ScoreForm(messages.Message):
     date = messages.StringField(2, required=True)
     won = messages.BooleanField(3, required=True)
     guesses = messages.IntegerField(4, required=True)
-
+    performance=messages.FloatField(5,required=True)
 
 class ScoreForms(messages.Message):
     """Return multiple ScoreForms"""
@@ -118,3 +140,5 @@ class StringMessage(messages.Message):
 class StringMessages(messages.Message):
     """StringMessage-- outbound (multi) string message"""
     mess = messages.MessageField(StringMessage, 1, repeated=True)
+
+

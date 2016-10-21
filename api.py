@@ -5,7 +5,7 @@ move game logic to another file. Ideally the API will be simple, concerned
 primarily with communication to/from the API's users."""
 
 
-import logging
+import itertools
 import endpoints
 from protorpc import remote, messages
 from google.appengine.api import memcache
@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms,StringMessages
+    ScoreForms,StringMessages, RankingForms
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -127,7 +127,7 @@ class GuessANumberApi(remote.Service):
         if "-" not in word_guessed:  # no blanks remaining
             game.end_game(True)
             return game.to_form(
-                "\nCongratulations! You Won. The word is:".format(joined_word))
+                "\nCongratulations! You Won. The word is:{}".format(chosen_word))
 
         if game.attempts_remaining == 1 and player_guess not in chosen_word:
             game.attempts_remaining -= 1
@@ -221,9 +221,20 @@ class GuessANumberApi(remote.Service):
         """Get the list of all active users whose game has not been over """
         usersList=[]
         game=Game.query(Game.game_over == False)
-
         return StringMessages(mess=[active.retu() for active in game])
 
+    @endpoints.method(response_message=RankingForms,
+                          path='games/users_ranking',
+                          name='get_users_ranking',
+                          http_method='GET')
+    def get_users_ranking(self, request):
+        "Get ranking of all users"
+        scores = Score.query().order(-Score.performance)
+        count=scores.count()
+        if scores:
+            return RankingForms(ranks=[score.to_form_ranking(rank=rank+1) for score,rank in itertools.izip(scores,range(count))])
+        else:
+            return RankingForms(items=["Score Board Empty"])
 
 
 
