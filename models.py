@@ -27,6 +27,7 @@ class Game(ndb.Model):
     game_over = ndb.BooleanProperty(required=True, default=False)
     user = ndb.KeyProperty(required=True, kind='User')
     letters_guessed=ndb.StringProperty(repeated=True)
+    game_history=ndb.StringProperty(repeated=True)
 
     @classmethod
     def new_game(cls, user, attempts):
@@ -47,6 +48,15 @@ class Game(ndb.Model):
         form.attempts_remaining = self.attempts_remaining
         form.game_over = self.game_over
         form.message = message
+        return form
+
+    def to_form_game(self):
+        form=GameHistory()
+        form.user=self.user.get().name
+        form.game_over=self.game_over
+        form.game_history=self.game_history
+        form.target_word=self.target
+
         return form
 
     def end_game(self, won=False):
@@ -106,6 +116,17 @@ class GameForm(messages.Message):
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
     user_name = messages.StringField(5, required=True)
+
+
+class GameHistory(messages.Message):
+    user= messages.StringField(1, required=True)
+    game_over=messages.BooleanField(2,required=True)
+    game_history = messages.StringField(3, repeated=True)
+    target_word= messages.StringField(4,required=True)
+
+
+class GamesHistory(messages.Message):
+    game_history = messages.MessageField(GameHistory, 6, repeated=True)
 
 
 class NewGameForm(messages.Message):

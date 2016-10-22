@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms,StringMessages, RankingForms
+    ScoreForms,StringMessages, RankingForms, GamesHistory
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -56,7 +56,8 @@ class GuessANumberApi(remote.Service):
         """Creates new game"""
         user = User.query(User.name == request.user_name).get()
         if not user:
-            raise endpoints.NotFoundException('A User with that name does not exist!')
+            raise endpoints.NotFoundException('A User with that'
+                                            'name does not exist!')
         try:
             game = Game.new_game(user.key, 2)
         except ValueError:
@@ -90,65 +91,78 @@ class GuessANumberApi(remote.Service):
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        # Return if game is already Over
         if game.game_over:
             return game.to_form('Game already over!')
-
-
+        # get the target word from database. Target word is created during new
+        #game.
         chosen_word = game.target
-        #player_guess = None  # will hold the players guess
-        guessed_letters = game.letters_guessed  # a list of letters guessed so far
+        game_history=game.game_history
+        guessed_letters = game.letters_guessed
         word_guessed = []
         for i in chosen_word:
-            word_guessed.append("-")  # create an unguessed, blank version of the word
-        #joined_word = None  # joins the words in the list word_guessed
-
-        attempts = game.attempts_remaining
-
+            word_guessed.append("-")
         player_guess=request.guess
         player_guess=player_guess.lower()
-        if not player_guess.isalpha():  # check the input is a letter. Also checks an input has been made.
+        if not player_guess.isalpha():
             return game.to_form("That is not a letter. Please try again.")
-        elif len(player_guess) > 1:  # check the input is only one letter
-            return game.to_form("That is more than one letter. Please try again.")
-        elif player_guess in guessed_letters:  # check it letter hasn't been guessed already
-            return game.to_form("You have already guessed that letter. Please try again.")
+        elif len(player_guess) > 1:  # check the input is signle character
+            return game.to_form("That is more than one letter.' "
+                                "'Please try again.")
+        # check letter is guesssed previously
+        elif player_guess in guessed_letters:
+            return game.to_form("You have already guessed that '"
+                                "'letter. Please try again.")
         else:
             pass
-
         guessed_letters.append(player_guess)
         game.letters_guessed=guessed_letters
 
         for letter in range(len(chosen_word)):
             for guess in guessed_letters:
                 if guess == chosen_word[letter]:
-                    word_guessed[letter] = guess  # replace all letters in the chosen word that match the players guess
+                    word_guessed[letter] = guess
         joined_word = "".join(word_guessed)
 
-        if "-" not in word_guessed:  # no blanks remaining
+        if "-" not in word_guessed:
             game.end_game(True)
+            game_history.append(
+                "Guess Made:<{}>. Result: Correct Guess".format(player_guess))
+            game.game_history=game_history
+            game.put()
             return game.to_form(
-                "\nCongratulations! You Won. The word is:{}".format(chosen_word))
+                "\nCongratulations! You Won.'"
+                "' The word is:{}".format(chosen_word))
 
         if game.attempts_remaining == 1 and player_guess not in chosen_word:
             game.attempts_remaining -= 1
+            game_history.append(
+                "Guess Made:<{}>. Result: Wrong Guess".format(player_guess))
+            game.game_history = game_history
             game.put()
             game.end_game(False)
             return game.to_form('All attempts made. YouLoose')
 
         if player_guess not in chosen_word:
+            game_history.append(
+                "Guess Made:<{}>. Result: Wrong Guess".format(player_guess))
             game.attempts_remaining -= 1
+            game.game_history = game_history
+        else:
+            game_history.append(
+                "Guess Made:<{}>. Result: Correct Guess".format(player_guess))
+            game.game_history = game_history
         game.put()
 
-
-
-        return game.to_form("Nice Move <{}>. Guess Other Letter (A-Z)".format(joined_word))
+        return game.to_form("Nice Move <{}>. Guess Other"
+                            " Letter (A-Z)".format(joined_word))
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',
                       name='get_scores',
                       http_method='GET')
     def get_scores(self, request):
-        """Return all scores"""
+        """Return all scores from database"""
         return ScoreForms(items=[score.to_form() for score in Score.query()])
 
     @endpoints.method(request_message=USER_REQUEST,
@@ -157,7 +171,7 @@ class GuessANumberApi(remote.Service):
                       name='get_user_scores',
                       http_method='GET')
     def get_user_scores(self, request):
-        """Returns all of an individual User's scores"""
+        """Returns score of an individual User"""
         user = User.query(User.name == request.user_name).get()
         if not user:
             raise endpoints.NotFoundException(
@@ -171,8 +185,8 @@ class GuessANumberApi(remote.Service):
                       http_method='GET')
     def get_average_attempts(self, request):
         """Get the cached average moves remaining"""
-        return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
-
+        return StringMessage(
+            message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
 
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -201,12 +215,13 @@ class GuessANumberApi(remote.Service):
                           name='get_high_scores',
                           http_method='GET')
     def get_high_scores(self, request):
-        "Get scores of all users"
+        "Get scores of all users, higher scores on top"
         limit=5
         if request.limit:
             limit=request.limit
 
-        scores = Score.query().order(-Score.won).order(Score.guesses).fetch(limit)
+        scores =\
+            Score.query().order(-Score.won).order(Score.guesses).fetch(limit)
         if scores:
             return ScoreForms(items=[score.to_form() for score in scores])
         else:
@@ -219,7 +234,6 @@ class GuessANumberApi(remote.Service):
                           http_method='GET')
     def get_active_users(self, request):
         """Get the list of all active users whose game has not been over """
-        usersList=[]
         game=Game.query(Game.game_over == False)
         return StringMessages(mess=[active.retu() for active in game])
 
@@ -228,15 +242,26 @@ class GuessANumberApi(remote.Service):
                           name='get_users_ranking',
                           http_method='GET')
     def get_users_ranking(self, request):
-        "Get ranking of all users"
+        "Get ranking of all users based on performance"
         scores = Score.query().order(-Score.performance)
         count=scores.count()
         if scores:
-            return RankingForms(ranks=[score.to_form_ranking(rank=rank+1) for score,rank in itertools.izip(scores,range(count))])
+            return RankingForms(
+                ranks=[
+                    score.to_form_ranking(rank=rank+1)
+                    for score,rank in itertools.izip(scores,range(count))])
         else:
             return RankingForms(items=["Score Board Empty"])
 
-
+    @endpoints.method(response_message=GamesHistory,
+                      path='games/games_history',
+                      name='get_games_history',
+                      http_method='GET')
+    def get_games_history(self, request):
+        "Get history of all moves of all games."
+        game=Game.query()
+        return GamesHistory(
+            game_history=[ game.to_form_game() for game in game])
 
     @staticmethod
     def _cache_average_attempts():
@@ -248,7 +273,7 @@ class GuessANumberApi(remote.Service):
                                         for game in games])
             average = float(total_attempts_remaining)/count
             memcache.set(MEMCACHE_MOVES_REMAINING,
-                         'The average moves remaining is {:.2f}'.format(average))
+                    'The average moves remaining is {:.2f}'.format(average))
 
 
 api = endpoints.api_server([GuessANumberApi])
