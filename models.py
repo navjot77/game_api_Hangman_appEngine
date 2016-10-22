@@ -7,7 +7,7 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
-
+#List of all words for puzzle. Random word gets selected from this list.
 words = ["udacity","education","simple","easy","navjot","university",
          "goooooood","apartment","hyundai","mercedes","engine","nanodegree",
          "fullstack" ]
@@ -51,6 +51,7 @@ class Game(ndb.Model):
         return form
 
     def to_form_game(self):
+        "Retyrn the GameHistory representation of game"
         form=GameHistory()
         form.user=self.user.get().name
         form.game_over=self.game_over
@@ -64,7 +65,8 @@ class Game(ndb.Model):
         the player lost."""
         self.game_over = True
         self.put()
-        performance= (self.attempts_remaining / float(self.attempts_allowed))*100
+        performance= \
+            (self.attempts_remaining / float(self.attempts_allowed))*100
 
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
@@ -88,11 +90,13 @@ class Score(ndb.Model):
     performance=ndb.FloatProperty(required=True)
 
     def to_form(self):
+        "Returns the ScoreForm representatioon of Score"
         return ScoreForm(user_name=self.user.get().name, won=self.won,
                          date=str(self.date), guesses=self.guesses,
                          performance=self.performance)
 
     def to_form_ranking(self,rank):
+        "Returns the RankingForm representation of Score"
         return RankingForm(user_name=self.user.get().name,
                            performance=self.performance,
                            rank=rank)
@@ -119,6 +123,7 @@ class GameForm(messages.Message):
 
 
 class GameHistory(messages.Message):
+    "GameHistory for outbound game history information"
     user= messages.StringField(1, required=True)
     game_over=messages.BooleanField(2,required=True)
     game_history = messages.StringField(3, repeated=True)
@@ -126,13 +131,13 @@ class GameHistory(messages.Message):
 
 
 class GamesHistory(messages.Message):
+    "Created nmultiple GameHistory form"
     game_history = messages.MessageField(GameHistory, 6, repeated=True)
 
 
 class NewGameForm(messages.Message):
     """Used to create a new game"""
     user_name = messages.StringField(1, required=True)
-
 
 
 class MakeMoveForm(messages.Message):
@@ -151,8 +156,6 @@ class ScoreForm(messages.Message):
 class ScoreForms(messages.Message):
     """Return multiple ScoreForms"""
     items = messages.MessageField(ScoreForm, 1, repeated=True)
-
-
 
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""

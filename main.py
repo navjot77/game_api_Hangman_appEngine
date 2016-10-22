@@ -6,9 +6,8 @@ cronjobs."""
 import webapp2
 from google.appengine.api import mail, app_identity
 from api import GuessANumberApi
-
 from models import Game
-import logging
+
 
 class SendReminderEmail(webapp2.RequestHandler):
     def get(self):
@@ -22,8 +21,6 @@ class SendReminderEmail(webapp2.RequestHandler):
             user=user_key.get()
             user_name=user.name
             user_email=user.email
-            logging.info("*******************")
-            logging.info(user_email)
             if user_email:
                 subject = 'This is a reminder!'
                 body = 'Hello {}, Complete Your Game...!'.format(user_name)

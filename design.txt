@@ -1,0 +1,17 @@
+In Developing API's for game "Hangman", following additional properties
+are added to model:
+In Game: Added letters_guessed : to keep a list of all the letters guessed by
+        Player during the game. When the player make a move, guess letter is
+        checked, whether it is in this list. If so, then user is told, and
+        user loose no chance in case if letter is already guessed before.
+        Added game_history: is a list of strings, that store all the moves
+        played by player. This is used later in api when user ask to get all
+        the moves of a game.
+In Score: Added Performance property which holds performance of each player.
+          When Score is populated(during game over), performace of User gets
+          caculated based on number of attempts remaining and total number of
+          attempts. This is converted into percentage. And this property is
+          later used by API to get the ranking of all players.
+
+Hangman Logic was not too hard, only thing was to update the number of attempts
+in the database at right time during the game and letter_guessed by Player.

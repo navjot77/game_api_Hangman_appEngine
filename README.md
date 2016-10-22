@@ -1,24 +1,30 @@
-#Full Stack Nanodegree Project 4 Refresh
+#Full Stack Nanodegree Project
 
 ## Set-Up Instructions:
 1.  Update the value of application in app.yaml to the app ID you have registered
  in the App Engine admin console and would like to use to host your instance of this sample.
-1.  Run the app with the devserver using dev_appserver.py DIR, and ensure it's
+2.  Run the app with the devserver using dev_appserver.py DIR, and ensure it's
  running by visiting the API Explorer - by default localhost:8080/_ah/api/explorer.
-1.  (Optional) Generate your client library(ies) with the endpoints tool.
- Deploy your application.
- 
- 
+Deploy your application.
+
  
 ##Game Description:
-Guess a number is a simple guessing game. Each game begins with a random 'target'
-number between the minimum and maximum values provided, and a maximum number of
-'attempts'. 'Guesses' are sent to the `make_move` endpoint which will reply
-with either: 'too low', 'too high', 'you win', or 'game over' (if the maximum
-number of attempts is reached).
-Many different Guess a Number games can be played by many different Users at any
-given time. Each game can be retrieved or played by using the path parameter
-`urlsafe_game_key`.
+Hangman games is simple one player game. Player needs to guess a word.
+User needs to enter the letter. And if letter matches tghe target word then
+User will be shown string with letter placed in right position and others
+letters  will be marked as '-'. User will be given 5 number of chances to guess
+the word. User can resume the game anytime. Each game can be retrieved or
+ played by using the path parameter `urlsafe_game_key`.
+
+##Playing Instructions.
+Player need to register first by using API 'create_user'. Email and unique user
+name is required for registration.
+To play a game, user needs to start a new game. Use appropriate API methods
+given below. On success new_game, urlsafe key will be provided. User needs to
+keep this string saved. And then to start a game, User need to use API
+ 'make_a_move'. It requires the urlsafe key to be entered.
+For other actions as to get score, history, performance, cancel a game etc,
+read below API methods.
 
 ##Files Included:
  - api.py: Contains endpoints and game playing logic.
@@ -40,12 +46,13 @@ given time. Each game can be retrieved or played by using the path parameter
  - **new_game**
     - Path: 'game'
     - Method: POST
-    - Parameters: user_name, min, max, attempts
+    - Parameters: user_name
     - Returns: GameForm with initial game state.
     - Description: Creates a new Game. user_name provided must correspond to an
     existing user - will raise a NotFoundException if not. Min must be less than
     max. Also adds a task to a task queue to update the average moves remaining
-    for active games.
+    for active games. Attempts is hard-coded in code for all games and for all
+    users.
      
  - **get_game**
     - Path: 'game/{urlsafe_game_key}'
@@ -74,7 +81,7 @@ given time. Each game can be retrieved or played by using the path parameter
     - Method: GET
     - Parameters: user_name
     - Returns: ScoreForms. 
-    - Description: Returns all Scores recorded by the provided player (unordered).
+    - Description: Returns all Scores recorded by the provided player(unordered).
     Will raise a NotFoundException if the User does not exist.
     
  - **get_active_game_count**
@@ -84,6 +91,44 @@ given time. Each game can be retrieved or played by using the path parameter
     - Returns: StringMessage
     - Description: Gets the average number of attempts remaining for all games
     from a previously cached memcache key.
+
+ - **get_active_games**
+    - Path: 'games/active_users'
+    - Method: GET
+    - Parameters: None
+    - Returns: StringMessages
+    - Description: This returns list of all User's with active games.
+
+ - **get_game_history**
+    - Path: 'games/games_history'
+    - Method: GET
+    - Parameters: None
+    - Returns: GamesHistory
+    - Description: This returns list of all hostory of all games.
+
+ - **get_users_ranking**
+    - Path: 'games/users_ranking'
+    - Method: GET
+    - Parameters: None
+    - Returns: RankingForms
+    - Description: This returns list of all User's with ranks, name, score.
+
+ - **get_high_scores**
+    - Path: 'games/high_scores'
+    - Method: GET
+    - Parameters: limit(Optional)
+    - Returns: ScoreForms
+    - Description: This returns list of all ScoreForm with Increasing Scores.
+                  Limit is optional, which limits the output to certain number.
+
+ - **cancel_any_game**
+    - Path: 'games/cancel_game/{urlsafe_key}'
+    - Method: GET
+    - Parameters: urlsafe_key
+    - Returns: StringMessages
+    - Description: This will receive the urlsafe_key from user, which will be
+     mapped to key in Game datastore. On success, the entry from Game table
+     will be deleted and Success message will be returned.
 
 ##Models Included:
  - **User**
@@ -108,5 +153,15 @@ given time. Each game can be retrieved or played by using the path parameter
     guesses).
  - **ScoreForms**
     - Multiple ScoreForm container.
+ - **RankingForm**
+    - Representation of Username, ranks and score.
+ - **RankingForms**
+    - Multiple RankingForm representation.
  - **StringMessage**
     - General purpose String container.
+ - **StringMessages**
+    - Multiple StringMessage container.
+ - **GameHistory**
+    - Representation of Game's History, user_name, game_over and target_word.
+ - **GamesHistory**
+    - Multiple GameHistory container.
