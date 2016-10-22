@@ -56,7 +56,7 @@ class Game(ndb.Model):
         form.user=self.user.get().name
         form.game_over=self.game_over
         form.game_history=self.game_history
-        form.target_word=self.target
+        #form.target_word=self.target
 
         return form
 
@@ -127,7 +127,7 @@ class GameHistory(messages.Message):
     user= messages.StringField(1, required=True)
     game_over=messages.BooleanField(2,required=True)
     game_history = messages.StringField(3, repeated=True)
-    target_word= messages.StringField(4,required=True)
+    #target_word= messages.StringField(4,required=True)
 
 
 class GamesHistory(messages.Message):

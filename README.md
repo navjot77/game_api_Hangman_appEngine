@@ -100,11 +100,11 @@ read below API methods.
     - Description: This returns list of all User's with active games.
 
  - **get_game_history**
-    - Path: 'games/games_history'
+    - Path: 'games/games_history/{urlsafe_game_key}'
     - Method: GET
-    - Parameters: None
-    - Returns: GamesHistory
-    - Description: This returns list of all hostory of all games.
+    - Parameters: urlsafe_game_key
+    - Returns: GameHistory
+    - Description: This returns history of moves of requested game.
 
  - **get_users_ranking**
     - Path: 'games/users_ranking'

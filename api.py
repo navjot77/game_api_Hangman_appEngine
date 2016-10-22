@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, StringMessages, RankingForms, GamesHistory
+    ScoreForms, StringMessages, RankingForms, GameHistory
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -253,15 +253,18 @@ class GuessANumberApi(remote.Service):
         else:
             return RankingForms(items=["Score Board Empty"])
 
-    @endpoints.method(response_message=GamesHistory,
-                      path='games/games_history',
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=GameHistory,
+                      path='games/games_history/{urlsafe_game_key}',
                       name='get_games_history',
                       http_method='GET')
     def get_games_history(self, request):
         "Get history of all moves of all games."
-        game = Game.query()
-        return GamesHistory(
-            game_history=[game.to_form_game() for game in game])
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game:
+           return game.to_form_game()
+        else:
+            raise endpoints.NotFoundException('Game not found!')
 
     @staticmethod
     def _cache_average_attempts():
