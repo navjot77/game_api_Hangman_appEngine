@@ -14,22 +14,22 @@ class SendReminderEmail(webapp2.RequestHandler):
         """Send a reminder email to each User with an email about games.
         Called every hour using a cron job"""
         app_id = app_identity.get_application_id()
-        games=Game.query(Game.game_over != False)
-
-        for game in games:
-            user_key=game.user
-            user=user_key.get()
-            user_name=user.name
-            user_email=user.email
-            if user_email:
-                subject = 'This is a reminder!'
-                body = 'Hello {}, Complete Your Game...!'.format(user_name)
-                # This will send test emails, the arguments to send_mail are:
-                # from, to, subject, body
-                mail.send_mail('noreply@{}.appspotmail.com'.format(app_id),
-                               user_email,
-                               subject,
-                               body)
+        games=Game.query(Game.game_over == False)
+        if games:
+            for game in games:
+                user_key=game.user
+                user=user_key.get()
+                user_name=user.name
+                user_email=user.email
+                if user_email:
+                    subject = 'This is a reminder!'
+                    body = 'Hello {}, Complete Your Game...!'.format(user_name)
+                    # This will send test emails, the arguments to send_mail
+                    #  are: from, to, subject, body
+                    mail.send_mail('noreply@{}.appspotmail.com'.format(app_id),
+                                   user_email,
+                                   subject,
+                                   body)
 
 
 class UpdateAverageMovesRemaining(webapp2.RequestHandler):
