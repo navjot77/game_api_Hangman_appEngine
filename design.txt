@@ -7,11 +7,9 @@ In Game: Added letters_guessed : to keep a list of all the letters guessed by
         Added game_history: is a list of strings, that store all the moves
         played by player. This is used later in api when user ask to get all
         the moves of a game.
-In Score: Added Performance property which holds performance of each player.
-          When Score is populated(during game over), performace of User gets
-          caculated based on number of attempts remaining and total number of
-          attempts. This is converted into percentage. And this property is
-          later used by API to get the ranking of all players.
+Added Model Performace: Fields: Performance, Rank, Name. Holds performance of
+            each player. When USer asks for Ranking, then performance, ranking
+            of each player is calculated and Performance table is populated.
 
 Hangman Logic was not too hard, only thing was to update the number of attempts
 in the database at right time during the game and letter_guessed by Player.

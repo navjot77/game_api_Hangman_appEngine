@@ -5,7 +5,7 @@ cronjobs."""
 
 import webapp2
 from google.appengine.api import mail, app_identity
-from api import GuessANumberApi
+from api import HangmanApi
 from models import Game
 
 
@@ -35,7 +35,7 @@ class SendReminderEmail(webapp2.RequestHandler):
 class UpdateAverageMovesRemaining(webapp2.RequestHandler):
     def post(self):
         """Update game listing announcement in memcache."""
-        GuessANumberApi._cache_average_attempts()
+        HangmanApi._cache_average_attempts()
         self.response.set_status(204)
 
 

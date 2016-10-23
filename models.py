@@ -18,6 +18,11 @@ class User(ndb.Model):
     name = ndb.StringProperty(required=True)
     email =ndb.StringProperty()
 
+    def add_performance(self, perform):
+        perform = Performance(user=self.name, performance=perform)
+        perform.put()
+        perform.put()
+
 
 class Game(ndb.Model):
     """Game object"""
@@ -51,7 +56,7 @@ class Game(ndb.Model):
         return form
 
     def to_form_game(self):
-        "Retyrn the GameHistory representation of game"
+        "Return the GameHistory representation of game"
         form=GameHistory()
         form.user=self.user.get().name
         form.game_over=self.game_over
@@ -74,10 +79,26 @@ class Game(ndb.Model):
                       performance=performance)
         score.put()
 
-    def retu(self):
-        m1=StringMessage()
-        m1.message=self.user.get().name
-        return m1
+class Performance(ndb.Model):
+    """Performance object"""
+    user = ndb.StringProperty(required=True)
+    performance=ndb.FloatProperty(required=True)
+
+    def to_form(self,rank):
+        "Returns the PerformanceForm representatioon of Score"
+        return PerformanceForm(user_name=self.user,
+                           performance=self.performance,
+                           rank=rank)
+
+class PerformanceForm(messages.Message):
+    """PerformanceForm for outbound Ranking information"""
+    user_name = messages.StringField(1, required=True)
+    performance=messages.FloatField(2,required=True)
+    rank=messages.IntegerField(3,required=True)
+
+class PerformanceForms(messages.Message):
+    "Return multiple PerformanceForm"
+    ranks=messages.MessageField(PerformanceForm,1,repeated=True)
 
 
 
@@ -95,22 +116,6 @@ class Score(ndb.Model):
                          date=str(self.date), guesses=self.guesses,
                          performance=self.performance)
 
-    def to_form_ranking(self,rank):
-        "Returns the RankingForm representation of Score"
-        return RankingForm(user_name=self.user.get().name,
-                           performance=self.performance,
-                           rank=rank)
-
-class RankingForm(messages.Message):
-    """RankingForm for outbound Ranking information"""
-    user_name = messages.StringField(1, required=True)
-    performance=messages.FloatField(2,required=True)
-    rank=messages.IntegerField(3,required=True)
-
-class RankingForms(messages.Message):
-    "Return multiple ranking form"
-    ranks=messages.MessageField(RankingForm,1,repeated=True)
-
 
 
 class GameForm(messages.Message):
@@ -121,6 +126,9 @@ class GameForm(messages.Message):
     message = messages.StringField(4, required=True)
     user_name = messages.StringField(5, required=True)
 
+class GamesForm(messages.Message):
+    "Return multiple GameForm"
+    mess= messages.MessageField(GameForm,1,repeated=True)
 
 class GameHistory(messages.Message):
     "GameHistory for outbound game history information"
@@ -138,6 +146,7 @@ class GamesHistory(messages.Message):
 class NewGameForm(messages.Message):
     """Used to create a new game"""
     user_name = messages.StringField(1, required=True)
+    attempts=messages.IntegerField(2,required=True)
 
 
 class MakeMoveForm(messages.Message):
@@ -160,9 +169,5 @@ class ScoreForms(messages.Message):
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""
     message = messages.StringField(1, required=True)
-
-class StringMessages(messages.Message):
-    """StringMessage-- outbound (multi) string message"""
-    mess = messages.MessageField(StringMessage, 1, repeated=True)
 
 

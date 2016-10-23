@@ -5,15 +5,14 @@ move game logic to another file. Ideally the API will be simple, concerned
 primarily with communication to/from the API's users."""
 
 
-import itertools
+from itertools import izip
 import endpoints
 from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
-
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, StringMessages, RankingForms, GameHistory
+    ScoreForms, GameHistory, Performance,PerformanceForms, GamesForm
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -31,9 +30,8 @@ MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 
 @endpoints.api(name='guess_a_number', version='v1')
-class GuessANumberApi(remote.Service):
-
-    """Game API"""
+class HangmanApi(remote.Service):
+    """Game API for Hangman"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
                       path='user',
@@ -61,7 +59,7 @@ class GuessANumberApi(remote.Service):
             raise endpoints.NotFoundException('A User with that'
                                               'name does not exist!')
         try:
-            game = Game.new_game(user.key, 2)
+            game = Game.new_game(user.key, request.attempts)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
                                                 'than minimum!')
@@ -93,9 +91,13 @@ class GuessANumberApi(remote.Service):
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game:
+            pass
+        else:
+            raise endpoints.BadRequestException('Game Not Found!')
         # Return if game is already Over
         if game.game_over:
-            return game.to_form('Game already over!')
+            raise  endpoints.ForbiddenException('Game already over!')
         # get the target word from database. Target word is created during new
         # game.
         chosen_word = game.target
@@ -107,14 +109,15 @@ class GuessANumberApi(remote.Service):
         player_guess = request.guess
         player_guess = player_guess.lower()
         if not player_guess.isalpha():
-            return game.to_form("That is not a letter. Please try again.")
+            raise endpoints.BadRequestException("That is not a"
+                                                " letter. Please try again.")
         elif len(player_guess) > 1:  # check the input is signle character
-            return game.to_form("That is more than one letter.' "
+            raise endpoints.BadRequestException("That is more than one letter."
                                 "'Please try again.")
         # check letter is guesssed previously
         elif player_guess in guessed_letters:
-            return game.to_form("You have already guessed that '"
-                                "'letter. Please try again.")
+            raise endpoints.BadRequestException("You have already guessed that"
+                                " letter. Please try again.")
         else:
             pass
         guessed_letters.append(player_guess)
@@ -174,12 +177,16 @@ class GuessANumberApi(remote.Service):
                       http_method='GET')
     def get_user_scores(self, request):
         """Returns score of an individual User"""
-        user = User.query(User.name == request.user_name).get()
-        if not user:
-            raise endpoints.NotFoundException(
-                'A User with that name does not exist!')
-        scores = Score.query(Score.user == user.key)
-        return ScoreForms(items=[score.to_form() for score in scores])
+        if request.user_name:
+            user = User.query(User.name == request.user_name).get()
+            if not user:
+                raise endpoints.NotFoundException(
+                    'A User with that name does not exist!')
+            scores = Score.query(Score.user == user.key)
+            return ScoreForms(items=[score.to_form() for score in scores])
+        else:
+            raise endpoints.BadRequestException(
+                'Enter Valid USer Name.')
 
     @endpoints.method(response_message=StringMessage,
                       path='games/average_attempts',
@@ -200,7 +207,7 @@ class GuessANumberApi(remote.Service):
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game:
             if game.game_over == True:
-                return StringMessage(message='Can not cancel this'
+                raise endpoints.BadRequestException('Can not cancel this'
                                              'game as Game is already OVER.')
             else:
                 name = game.user.get().name
@@ -226,32 +233,57 @@ class GuessANumberApi(remote.Service):
         if scores:
             return ScoreForms(items=[score.to_form() for score in scores])
         else:
-            return ScoreForms(items=["Score Board Empty"])
+            raise endpoints.NotFoundException("Score Board Empty.")
 
-    @endpoints.method(response_message=StringMessages,
-                      path='games/active_users',
-                      name='get_active_users',
+    @endpoints.method(request_message=USER_REQUEST,
+                      response_message=GamesForm,
+                      path='games/user_games/{user_name}',
+                      name='get_user_games',
                       http_method='GET')
-    def get_active_users(self, request):
-        """Get the list of all active users whose game has not been over """
-        game = Game.query(Game.game_over == False)
-        return StringMessages(mess=[active.retu() for active in game])
+    def get_user_games(self, request):
+        """Get the list of all active games of a users """
+        user = User.query(User.name == request.user_name).get()
+        if user:
+            game = Game.query(Game.game_over == False, Game.user == user.key)
+            if game.count():
+                return GamesForm(
+                    mess=[active.to_form("Games Stat") for active in game])
+            else:
+                raise endpoints.ForbiddenException('No active'
+                                                   ' game for requested User')
+        else:
+            raise endpoints.ForbiddenException('User Name does not Exist')
 
-    @endpoints.method(response_message=RankingForms,
+    @endpoints.method(response_message=PerformanceForms,
                       path='games/users_ranking',
                       name='get_users_ranking',
                       http_method='GET')
     def get_users_ranking(self, request):
         "Get ranking of all users based on performance"
-        scores = Score.query().order(-Score.performance)
-        count = scores.count()
-        if scores:
-            return RankingForms(
-                ranks=[
-                    score.to_form_ranking(rank=rank+1)
-                    for score, rank in itertools.izip(scores, range(count))])
+        user=User.query()
+        entity=Performance.query()
+        for each in entity:
+            each.key.delete()
+        for each_user in user:
+            game=Score.query(Score.user == each_user.key)
+            total_performance=0.0
+            for each in game:
+                factor=0
+                if each.won == True:
+                    factor=1
+                total_performance =total_performance+(factor* each.performance)
+            each_user.add_performance(total_performance)
+        players = Performance.query().order(-Performance.performance)
+        rank_list=[]
+        count=players.count()
+        if count:
+            for player, rank in izip(players, range(count)):
+                rank_list.append(player.to_form(rank=rank+1))
+            return PerformanceForms(
+                                 ranks=rank_list)
         else:
-            return RankingForms(items=["Score Board Empty"])
+            raise endpoints.NotFoundException("Performance board Empty")
+
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameHistory,
@@ -280,4 +312,4 @@ class GuessANumberApi(remote.Service):
                          'remaining is {:.2f}'.format(average))
 
 
-api = endpoints.api_server([GuessANumberApi])
+api = endpoints.api_server([HangmanApi])

@@ -92,12 +92,12 @@ read below API methods.
     - Description: Gets the average number of attempts remaining for all games
     from a previously cached memcache key.
 
- - **get_active_games**
-    - Path: 'games/active_users'
+ - **get_user_games**
+    - Path: 'games/user_games'
     - Method: GET
-    - Parameters: None
-    - Returns: StringMessages
-    - Description: This returns list of all User's with active games.
+    - Parameters: user_name
+    - Returns: GamesForm
+    - Description: This returns list of User's all active games.
 
  - **get_game_history**
     - Path: 'games/games_history/{urlsafe_game_key}'
@@ -110,7 +110,7 @@ read below API methods.
     - Path: 'games/users_ranking'
     - Method: GET
     - Parameters: None
-    - Returns: RankingForms
+    - Returns: PerformanceForms
     - Description: This returns list of all User's with ranks, name, score.
 
  - **get_high_scores**
@@ -139,6 +139,9 @@ read below API methods.
     
  - **Score**
     - Records completed games. Associated with Users model via KeyProperty.
+
+ - **Performace**
+    - Keeps records of ranking of all users.
     
 ##Forms Included:
  - **GameForm**
@@ -153,10 +156,10 @@ read below API methods.
     guesses).
  - **ScoreForms**
     - Multiple ScoreForm container.
- - **RankingForm**
+ - **PerformanceForm**
     - Representation of Username, ranks and score.
- - **RankingForms**
-    - Multiple RankingForm representation.
+ - **PerformanceForms**
+    - Multiple PerformanceForm representation.
  - **StringMessage**
     - General purpose String container.
  - **StringMessages**
