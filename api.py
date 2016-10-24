@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-`
-"""api.py - Create and configure the Game API exposing the resources.
-This can also contain game logic. For more complex games it would be wise to
-move game logic to another file. Ideally the API will be simple, concerned
-primarily with communication to/from the API's users."""
 
 
 from itertools import izip
@@ -17,7 +13,8 @@ from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
-    urlsafe_game_key=messages.StringField(1),)
+    urlsafe_game_key=messages.StringField(1),
+    user_name=messages.StringField(2,required=True))
 GET_SCORES_LIMIT = endpoints.ResourceContainer(
     limit=messages.IntegerField(1),)
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
@@ -78,7 +75,8 @@ class HangmanApi(remote.Service):
     def get_game(self, request):
         """Return the current game state."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
+        user=User.query(User.name == request.user_name).get()
+        if user and game and user.key == game.user:
             return game.to_form('Time to make a move!')
         else:
             raise endpoints.NotFoundException('Game not found!')
@@ -205,7 +203,8 @@ class HangmanApi(remote.Service):
     def cancel_game(self, request):
         """Cancel game as per requested urlsafe_key"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
+        user = User.query(User.name == request.user_name).get()
+        if user and game and user.key == game.user:
             if game.game_over == True:
                 raise endpoints.BadRequestException('Can not cancel this'
                                              'game as Game is already OVER.')
@@ -293,8 +292,9 @@ class HangmanApi(remote.Service):
     def get_games_history(self, request):
         "Get history of all moves of all games."
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
-           return game.to_form_game()
+        user = User.query(User.name == request.user_name).get()
+        if user and game and user.key == game.user:
+            return game.to_form_game()
         else:
             raise endpoints.NotFoundException('Game not found!')
 
